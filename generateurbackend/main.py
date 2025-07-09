@@ -23,16 +23,18 @@ app = FastAPI(title="API Garde-Corps v11.0 (Unified)", version="11.0.0")
 
 # Configuration de l'API Gemini (si la clé est disponible)
 if genai:
-    try:
-        api_key = os.getenv("MA_CLE_GEMINI") 
-        if api_key:
-            genai.configure(api_key=api_key)
-        else:
-            print("Avertissement: MA_CLE_GEMINI n'est pas définie. L'assistant IA sera désactivé.")
-            genai = None
-    except Exception as e:
-        print(f"Erreur de configuration de l'API Gemini: {e}")
+    api_key = os.getenv("MA_CLE_GEMINI")
+    if not api_key:
+        print("AVERTISSEMENT : La variable d'environnement MA_CLE_GEMINI n'est pas définie. L'assistant IA sera désactivé.")
         genai = None
+    else:
+        try:
+            genai.configure(api_key=api_key)
+            print("API Gemini configurée avec succès.")
+        except Exception as e:
+            print(f"ERREUR : Impossible de configurer l'API Gemini. L'assistant IA sera désactivé. Erreur: {e}")
+            genai = None
+
 
 # Configuration CORS pour le développement local
 origins = ["http://127.0.0.1:5500", "http://localhost:5500", "null"]
