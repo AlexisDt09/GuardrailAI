@@ -16,4 +16,4 @@ COPY frontend/ ./frontend
 EXPOSE 8000
 
 # Lancer l'application
-CMD ["gunicorn", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "-b", "0.0.0.0:8000", "main:app"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
