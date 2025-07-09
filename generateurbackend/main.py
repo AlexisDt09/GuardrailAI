@@ -396,3 +396,14 @@ async def draw_pdf_plan(data: FinalPlanData):
             raise HTTPException(status_code=500, detail="La création du PDF a échoué.")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur lors du dessin: {str(e)}")
+# ===============================================
+# 7. SERVIR LE FRONTEND (à la toute fin)
+# ===============================================
+
+@app.get("/")
+async def read_root():
+    """Sert la page d'accueil de l'application."""
+    # On utilise un chemin absolu pour être sûr à 100%
+    return FileResponse('/app/frontend/index.html')
+
+app.mount("/static", StaticFiles(directory="/app/frontend"), name="static")
