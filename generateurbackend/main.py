@@ -22,18 +22,43 @@ from dessin_pdf import creer_plan_pdf
 app = FastAPI(title="API Garde-Corps v11.0 (Unified)", version="11.0.0")
 
 # Configuration de l'API Gemini (si la clé est disponible)
-if genai:
-    api_key = os.getenv("MA_CLE_GEMINI")
-    if not api_key:
-        print("AVERTISSEMENT : La variable d'environnement MA_CLE_GEMINI n'est pas définie. L'assistant IA sera désactivé.")
-        genai = None
-    else:
+is_gemini_configured = False # On ajoute un petit drapeau pour ne configurer qu'une seule fois
+
+@app.post("/api/parse-text", response_model=ParsedFormData)
+async def parse_text_to_form(data: DescriptionData):
+    global is_gemini_configured
+
+    if not genai:
+        raise HTTPException(status_code=503, detail="Le service d'analyse IA n'est pas disponible (module non installé).")
+
+    # --- DÉBUT DE LA LOGIQUE AJOUTÉE ---
+    # On configure l'API seulement si ça n'a pas déjà été fait
+    if not is_gemini_configured:
+        print("Tentative de configuration de l'API Gemini...")
+        api_key = os.getenv("MA_CLE_GEMINI")
+        if not api_key:
+            raise HTTPException(status_code=503, detail="La clé d'API MA_CLE_GEMINI n'est pas configurée sur le serveur.")
+
         try:
             genai.configure(api_key=api_key)
+            is_gemini_configured = True
             print("API Gemini configurée avec succès.")
         except Exception as e:
-            print(f"ERREUR : Impossible de configurer l'API Gemini. L'assistant IA sera désactivé. Erreur: {e}")
-            genai = None
+            raise HTTPException(status_code=500, detail=f"Erreur de configuration de l'API Gemini: {e}")
+    # --- FIN DE LA LOGIQUE AJOUTÉE ---
+
+    # Le reste de votre fonction continue normalement
+    try:
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        prompt = PROMPT_TEXT_PARSER.format(user_text=data.description)
+        response = await model.generate_content_async(prompt)
+        response_text = response.text.strip()
+        json_match = re.search(r'```json\n({.*?})\n```', response_text, re.DOTALL)
+        json_str = json_match.group(1) if json_match else response_text
+        parsed_data = json.loads(json_str)
+        return ParsedFormData(**parsed_data)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur lors de l'analyse du texte: {str(e)}")
 
 
 # Configuration CORS pour le développement local
